@@ -11,6 +11,8 @@ console.log(getConifg())
 const output=path.join(__dirname,"../dist/")
 
 
+const posthtml = require('posthtml')
+
 
 // 获取模版
 // 拼接
@@ -24,6 +26,24 @@ fs.readFileSync(htmlTemplatePath+"index.html", 'utf8'),
   filename:htmlTemplatePath+"index.html"
 }
 )
+
+let a=posthtml().process(html,{ sync: true })
+
+// 提取css和js
+
+// content
+// instanceof Object
+// attrs 
+// tag:"link"
+// href:"../statics/styles/index.scss"
+// rel:"stylesheet"
+
+// tag:"script"
+// src:"../statics/scripts/index.js"
+
+const node=a.tree[2]
+
+console.log(node)
 
 // 查询文件夹
 // 存在则复制
