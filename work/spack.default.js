@@ -1,7 +1,17 @@
-module.exports=(api)=>{
-  console.log(api)
-  return {
-    output:"dist",
-    css:"less"
-  }
+const path=require("path")
+const fs=require("fs")
+
+module.exports= (c)=>{
+    const context=c?c:process.cwd();
+    const configFile=path.join(context,".spack.json")
+    let api={}
+    if(fs.existsSync(configFile)){
+        api=JSON.parse(fs.readFileSync(configFile,"utf8"))
+    }
+    return {
+        context,
+        output:path.join(context,api.output?api.output:"output"),
+        entry:path.join(context,api.entry?api.entry:"entry"),
+        cssCompile:"less"
+    }
 }

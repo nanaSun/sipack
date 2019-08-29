@@ -1,51 +1,65 @@
+// 系统方法
 const fs=require("fs")
-const fsHelperConstruct=require("./libs/fs")
 const path=require("path")
+
+
+// html编译
 const ejs = require('ejs')
-const URL = require('ejs')
-
-const prettier = require("prettier");
-
-const getConifg=require("./spack.default")
-
-console.log(getConifg())
-
-const output=path.join(__dirname,"../dist/")
-
-
 const posthtmlParser = require('posthtml-parser')
 const posthtmlRender = require('posthtml-render')
 
+//
+// css后期处理，加前缀
+const autoprefixer = require('autoprefixer');
+const postcss = require('postcss');
+
+// sass编译器
+const sass = require('node-sass');
+
+// less编译器
+const less = require("less")
+
+// babel
+const babel = require("@babel/core");
+
+// babel defaultConfig
+const babelConfig={
+  "presets": [
+    [
+      "@babel/env",
+      {
+        "useBuiltIns": "entry"
+      }
+    ]
+  ]
+}
+
+// 格式化代码
+const prettier = require("prettier");
+
+// 遍历文件夹
+const fsHelperConstruct=require("./libs/fs")
+
+// 获取配置
+const initConfig=require("./spack.default")
 
 
-const publicPath=path.join(__dirname,"../public/")
-const staticPath=path.join(publicPath,"statics")
-const viewPath=path.join(publicPath,"views")
+const {context,output,entry,cssCompile}=initConfig()
+
+
+// 开发环境
+const viewEntryPath=path.join(entry,"views")
+const entryStatic=path.join(output,"statics")
+const styleEntryPath=path.join(entryStatic,"styles")
+const scriptEntryPath=path.join(entryStatic,"scripts")
+
+// 发布环境
 const outputStatic=path.join(output,"statics")
-const styleOutputPath=path.join(__dirname,"../","dist","styles")
-const scripOutputPath=path.join(__dirname,"../","dist","scripts")
-
-// 提取css和js
-
-// content
-// instanceof Object
-// attrs 
-// tag:"link"
-// href:"../statics/styles/index.scss"
-// rel:"stylesheet"
-
-// tag:"script"
-// src:"../statics/scripts/index.js"
+const styleOutputPath=path.join(outputStatic,"styles")
+const scriptOutputPath=path.join(outputStatic,"scripts")
 
 
 
-
-// 查询文件夹
-// 存在则复制
-// if(!fs.existsSync(output+"views/")){
-//   fs.mkdirSync(output+"views/",{recursive:true}) 
-// }
-// fs.writeFileSync(output+"views/index.html", prettier.format(html, { semi:true, parser: "html" }),'utf8')
 const fsHelper=fsHelperConstruct(viewPath)
 const htmls=fsHelper.getAllFiles("./")
 
@@ -99,26 +113,7 @@ const tasks=htmls.map((htmlPath)=>{
   }
 })
 
-// 加前缀
 
-const autoprefixer = require('autoprefixer');
-const postcss = require('postcss');
-const sass = require('node-sass');
-
-// style
-// js
-
-const babel = require("@babel/core");
-const babelConfig={
-  "presets": [
-    [
-      "@babel/env",
-      {
-        "useBuiltIns": "entry"
-      }
-    ]
-  ]
-}
 
 
 async function run(){
@@ -141,13 +136,12 @@ async function run(){
       if(scriptmap.indexOf(s)<0){
         scriptmap.push(s)
         filesResult.push({
-          path:path.resolve(scripOutputPath,s),
+          path:path.resolve(scriptOutputPath,s),
           source:jsProcess(path.join(staticPath,s))
         })
       }
     }
   }
-  console.log(filesResult)
   await writeFiles(filesResult)
 }
 
@@ -182,17 +176,7 @@ function jsProcess(jsPath){
 
 
 return ;
-// scss
 
-
-// if(!fs.existsSync(output+"statics/styles/")){
-//   fs.mkdirSync(output+"statics/styles/",{recursive:true}) 
-// }
-
-
-
-console.log(tasks)
-return;
 postcss(autoprefixer).process(result.css).then(r => {
   r.warnings().forEach(warn => {
     console.warn(warn.toString())
@@ -203,7 +187,7 @@ postcss(autoprefixer).process(result.css).then(r => {
 
 
 // less
-var less = require("less")
+
 
 less.render(fs.readFileSync(styleTemplatePath+"/index.less", 'utf8'), {})
 .then(function(data) {
