@@ -12,6 +12,6 @@ module.exports= (c)=>{
         context,
         output:path.join(context,api.output?api.output:"output"),
         entry:path.join(context,api.entry?api.entry:"entry"),
-        cssCompile:"less"
+        isImageMin:api.imgmin?api.imgmin:false,
     }
 }

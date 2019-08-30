@@ -19,20 +19,15 @@ const sass = require('node-sass');
 // less编译器
 const less = require("less")
 
-// babel
+//babel
 const babel = require("@babel/core");
 
 // babel defaultConfig
-const babelConfig={
-  "presets": [
-    [
-      "@babel/env",
-      {
-        "useBuiltIns": "entry"
-      }
-    ]
-  ]
-}
+
+// 图片压缩
+const imagemin = require('imagemin');
+const imageminJpegtran = require('imagemin-jpegtran');
+const imageminPngquant = require('imagemin-pngquant');
 
 // 格式化代码
 const prettier = require("prettier");
@@ -40,27 +35,25 @@ const prettier = require("prettier");
 // 遍历文件夹
 const fsHelperConstruct=require("./libs/fs")
 
+const {getNewRelativePath}=require("./libs/path")
+
 // 获取配置
 const initConfig=require("./spack.default")
 
 
-const {context,output,entry,cssCompile}=initConfig()
+const {context,output,entry,isImageMin}=initConfig()
 
 
-// 开发环境
+
+// 开发环境的主要mapview
 const viewEntryPath=path.join(entry,"views")
-const entryStatic=path.join(output,"statics")
-const styleEntryPath=path.join(entryStatic,"styles")
-const scriptEntryPath=path.join(entryStatic,"scripts")
 
-// 发布环境
+// 发布环境的静态资源
 const outputStatic=path.join(output,"statics")
-const styleOutputPath=path.join(outputStatic,"styles")
-const scriptOutputPath=path.join(outputStatic,"scripts")
 
 
 
-const fsHelper=fsHelperConstruct(viewPath)
+const fsHelper=fsHelperConstruct(viewEntryPath)
 const htmls=fsHelper.getAllFiles("./")
 
 function getNode(node){
@@ -76,48 +69,68 @@ function getNode(node){
   return nodes
 }
 
+function getOutputPath(p){
+  return path.join(viewEntryPath,p)
+}
 
 // 获取html中的信息
 const tasks=htmls.map((htmlPath)=>{
+ 
   // 获取模版
   // 拼接
   let people = ['geddy', 'neil', 'alex']
-  let html = ejs.render(fs.readFileSync(htmlPath, 'utf8'), {people: people},{filename:htmlPath})
+  let html = ejs.render(fs.readFileSync(getOutputPath(htmlPath), 'utf8'), {people: people},{filename:getOutputPath(htmlPath)})
   html=prettier.format(html, { semi:true, parser: "html" })
   // 获取ast
   let htmlAst = posthtmlParser(html)
-  const htmlpath=path.join(output,path.relative(viewPath,htmlPath))
   
   const styles=[]
   const scripts=[]
+  const images=[]
   // 解析ast
   for(let node of htmlAst){
     getNode(node).forEach((n)=>{
       if(n.tag==="script" && n.attrs.src){ 
-        scripts.push(n.attrs.src)
-        n.attrs.src=path.relative(path.dirname(htmlpath),path.join(outputStatic,path.relative(staticPath,path.join(viewPath,n.attrs.src))))
+        const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.src,"view","","view")
+        scripts.push(newAddr)
+        n.attrs.src=newAddr.relPath
         
       }else if(n.tag==="link" && n.attrs.rel==="stylesheet"){
-        styles.push(n.attrs.href)
-        n.attrs.href=path.relative(path.dirname(htmlpath),path.join(outputStatic,path.relative(staticPath,path.join(viewPath,n.attrs.href))))
-        
+        const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.href,"view","","view")
+        styles.push(newAddr)
+        n.attrs.href=newAddr.relPath
+      }else if(n.tag==="img" && n.attrs.src){
+        const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.src,"view","","view")
+        images.push(newAddr)
+        n.attrs.src=newAddr.relPath
       }
     })
   }
   return {
-    htmlPath:path.join(output,path.relative(viewPath,htmlPath)),
+    htmlPath:path.join(output,"view",htmlPath),
     htmlAst,
     html:posthtmlRender(htmlAst),
     scripts,
-    styles
+    styles,
+    images
   }
 })
 
 
+/**
+ * 
+ * @param {*} p 待编译的css路径
+ */
+function cssPathProcess(p){
+  const oriPath=path.parse(p);
+  oriPath.ext=".css";
+  oriPath.base=oriPath.base.replace(/\.(sc|le)ss/i,".css");
+  return path.format(oriPath)
+}
 
 
 async function run(){
-  const filesResult=[],stylesmap=[],scriptmap=[]
+  const filesResult=[],stylesmap=[],scriptmap=[],imagesmap=[]
   for(let task of tasks){
     filesResult.push({
       path:task.htmlPath,
@@ -125,24 +138,30 @@ async function run(){
     })
     for(let s of task.styles){
       if(stylesmap.indexOf(s)<0){
-        stylesmap.push(s)
+        stylesmap.push(s.relPath)
         filesResult.push({
-          path:path.resolve(styleOutputPath,s),
-          source:await cssProcess(path.join(staticPath,s))
+          path:cssPathProcess(s.aimRelAbPath),
+          source:await cssProcess(s.oriRelAbPath)
         })
       }
     }
     for(let s of task.scripts){
       if(scriptmap.indexOf(s)<0){
-        scriptmap.push(s)
+        scriptmap.push(s.aim)
         filesResult.push({
-          path:path.resolve(scriptOutputPath,s),
-          source:jsProcess(path.join(staticPath,s))
+          path:s.aimRelAbPath,
+          source:jsProcess(s.oriRelAbPath)
         })
+      }
+    }
+    for(let s of task.images){
+      if(imagesmap.indexOf(s)<0){
+        imagesmap.push(s)
       }
     }
   }
   await writeFiles(filesResult)
+  await writeAssets(imagesmap)
 }
 
 run()
@@ -154,101 +173,54 @@ async function writeFiles(files){
     fs.writeFileSync(f.path, f.source,'utf8')
   }
 }
-
-
+async function writeAssets(images){
+  if(isImageMin){
+    await imagemin(images.map((i)=>i.oriRelAbPath), {
+      destination: path.join(outputStatic,"images"),
+      plugins: [
+        imageminJpegtran(),
+        imageminPngquant({
+          quality: [0.6, 0.8]
+        })
+      ]
+    })
+  }else{
+    images.forEach((img)=>{
+      if(!fs.existsSync(img.aimRelAbPath)){
+        fs.mkdirSync(path.dirname(img.aimRelAbPath),{recursive:true}) 
+      }
+      fs.writeFileSync(img.aimRelAbPath, fs.readFileSync(img.oriRelAbPath));
+    })
+  }
+  return;
+}
 async function cssProcess(cssPath){
-  const result=sass.renderSync({
-    file: cssPath,
-  });
-  const css=await postcss(autoprefixer).process(result.css).then(r => {
+  let css=""
+  const resource=fs.readFileSync(cssPath, 'utf8')
+  const pathObj=path.parse(cssPath)
+  if(pathObj.ext===".scss"){
+    const result=sass.renderSync({
+      data: resource,
+    });
+    css=result.css
+  }else if(pathObj.ext===".less"){
+    const result =await less.render(resource, {})
+    css=result.css
+  }
+  //加前缀
+  return await postcss(autoprefixer).process(css).then(r => {
     r.warnings().forEach(warn => {
       console.warn(warn.toString())
     })
     return prettier.format(r.css.toString(), { semi:true, parser: "css" })
   })
-  return css
 }
 
 function jsProcess(jsPath){
-  const js=babel.transformFileSync(jsPath, babelConfig)
+  const js=babel.transformFileSync(jsPath)
   return prettier.format(js.code, { semi:true, parser: "babel" })
+  return ""
 }
 
 
 return ;
-
-postcss(autoprefixer).process(result.css).then(r => {
-  r.warnings().forEach(warn => {
-    console.warn(warn.toString())
-  })
-  fs.writeFileSync(output+"statics/styles/index.css", prettier.format(r.css.toString(), { semi:true, parser: "css" }),'utf8')
-  console.log(r.css)
-})
-
-
-// less
-
-
-less.render(fs.readFileSync(styleTemplatePath+"/index.less", 'utf8'), {})
-.then(function(data) {
-  postcss(autoprefixer).process(data.css).then(r => {
-    r.warnings().forEach(warn => {
-      console.warn(warn.toString())
-    })
-    fs.writeFileSync(output+"statics/styles/index.less.css", prettier.format(r.css, { semi:true, parser: "css" }),'utf8')
-    console.log(r.css)
-  })
-  
-},
-function(error) {
-  console.log(error)
-});
-
-
-
-// 编译js
-
-
-
-
-
-
-// 图片压缩
-
-const imagemin = require('imagemin');
-const imageminJpegtran = require('imagemin-jpegtran');
-const imageminPngquant = require('imagemin-pngquant');
-
-const assetsTemplatePath=path.join(__dirname,"../public/statics/");
-
-(async () => {
-	const files = await imagemin([assetsTemplatePath+'images/*.{jpg,png}'], {
-		destination: output+"statics/images",
-		plugins: [
-			imageminJpegtran(),
-			imageminPngquant({
-				quality: [0.6, 0.8]
-			})
-		]
-	});
-	console.log(files);
-})();
-
-
-// require('imagemin-gifsicle')({
-//   interlaced: false
-// }),
-// require('imagemin-mozjpeg')({
-//   progressive: true,
-//   arithmetic: false
-// }),
-// require('imagemin-pngquant')({
-//   floyd: 0.5,
-//   speed: 2
-// }),
-// require('imagemin-svgo')({
-//   plugins: [
-//       { removeTitle: true },
-//       { convertPathData: false }
-//   ]
-// })

@@ -16,7 +16,7 @@ module.exports = function fsHelper(context) {
       const folderPath=path.join(rootPath,folder);
       let st = fs.statSync(folderPath);
       if (st.isFile()){
-        Files.push(folderPath)
+        Files.push(folder)
       }else if (st.isDirectory()) {
         // 作为文件夹
         fs.readdirSync(folderPath).forEach(function (filename) {

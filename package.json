@@ -1,8 +1,11 @@
 {
-  "name": "test",
+  "name": "spack-c",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "bin": {
+    "spack-c": "bin/spack-c"
+  },
+  "main": "./work/template.js",
   "scripts": {
     "start": "http-server dist",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -12,12 +15,12 @@
   ],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
-  "devDependencies": {
+  "dependencies": {
     "@babel/core": "^7.5.5",
     "@babel/preset-env": "^7.5.5",
     "autoprefixer": "^9.6.1",
     "core-js": "^3.2.1",
+    "css-tree": "^1.0.0-alpha.34",
     "ejs": "^2.6.2",
     "http-server": "^0.11.1",
     "imagemin": "^7.0.0",
