@@ -1,0 +1,16 @@
+#!/usr/bin/env node
+const operation=process.argv[2]||""
+const folder=process.argv[3]||""
+switch(operation){
+  case "init":
+    if(!folder){
+      console.warn("you need a prject name such as : sepack init yourappname")
+      return
+    }else{
+      require("../work/init")(folder)
+    }
+    return;
+  default:
+    require("../work/template")(operation)
+    return;
+}

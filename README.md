@@ -1,38 +1,34 @@
-## 
+## sepack
 
-https://github.com/zhangxinxu/mockup
+simple pack 最简单的打包工具，以html为入口，打包📦文件的方式。
 
-## 浏览器配置
+还原html+js+css的方式。
 
-https://github.com/browserslist/browserslist
+支持scss和less
+
+支持babel编译es6=>es5
+
+## 新建一个sepack项目
+
+```
+npx sepack init yourProjectName
+cd yourProjectName
+npm install
+npm start
+```
+
+## 用法
+
+项目安装
+
+```
+npm install --save-dev sepack
+```
+
+一键打包
+```
+npx sepack
+```
 
 
-## babel配置
 
-https://babeljs.io/docs/en/babel-core
-https://babeljs.io/docs/en/babel-preset-env
-
-
-## scss配置
-
-https://github.com/sass/node-sass
-
-## less配置
-
-https://github.com/less/less.js
-
-## html配置
-
-https://github.com/mde/ejs
-
-## http server
-
-https://github.com/http-party/http-server
-
-## image配置
-
-https://github.com/imagemin/imagemin
-
-## 格式化工具
-
-https://prettier.io/

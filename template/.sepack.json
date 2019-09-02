@@ -1,0 +1,7 @@
+{
+  "output":"dist",
+  "entry":"src",
+  "cssmin":false,
+  "jsmin":false,
+  "imagemin":false
+}

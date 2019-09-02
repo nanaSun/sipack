@@ -38,7 +38,7 @@ const fsHelperConstruct=require("./libs/fs")
 const {getNewRelativePath}=require("./libs/path")
 
 // 获取配置
-const initConfig=require("./spack.default")
+const initConfig=require("./sepack.default")
 
 
 const {context,output,entry,isImageMin}=initConfig()
@@ -52,70 +52,91 @@ const viewEntryPath=path.join(entry,"views")
 const outputStatic=path.join(output,"statics")
 
 
-
 const fsHelper=fsHelperConstruct(viewEntryPath)
-const htmls=fsHelper.getAllFiles("./")
 
 function getNode(node){
   let nodes=[]
-  if(node.content instanceof Array){
-    for(let n of node.content){
-      nodes=nodes.concat(getNode(n))
+  if(node.tag==="meta"){
+    return [{
+      tag: node.tag,
+      ...node.attrs
+    }]
+  }else if(node.content instanceof Array){
+    if(node.content.length===1&&typeof node.content[0] ==="string"){
+      return [node]
+    }else{
+      for(let n of node.content){
+        nodes=nodes.concat(getNode(n))
+      }
     }
   }else if(node instanceof Object){
-    
     return [node]
   }
   return nodes
 }
 
-function getOutputPath(p){
+function getEntryPath(p){
   return path.join(viewEntryPath,p)
 }
 
 // 获取html中的信息
-const tasks=htmls.map((htmlPath)=>{
- 
-  // 获取模版
-  // 拼接
-  let people = ['geddy', 'neil', 'alex']
-  let html = ejs.render(fs.readFileSync(getOutputPath(htmlPath), 'utf8'), {people: people},{filename:getOutputPath(htmlPath)})
-  html=prettier.format(html, { semi:true, parser: "html" })
-  // 获取ast
-  let htmlAst = posthtmlParser(html)
-  
-  const styles=[]
-  const scripts=[]
-  const images=[]
-  // 解析ast
-  for(let node of htmlAst){
-    getNode(node).forEach((n)=>{
-      if(n.tag==="script" && n.attrs.src){ 
-        const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.src,"view","","view")
-        scripts.push(newAddr)
-        n.attrs.src=newAddr.relPath
-        
-      }else if(n.tag==="link" && n.attrs.rel==="stylesheet"){
-        const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.href,"view","","view")
-        styles.push(newAddr)
-        n.attrs.href=newAddr.relPath
-      }else if(n.tag==="img" && n.attrs.src){
-        const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.src,"view","","view")
-        images.push(newAddr)
-        n.attrs.src=newAddr.relPath
-      }
-    })
-  }
-  return {
-    htmlPath:path.join(output,"view",htmlPath),
-    htmlAst,
-    html:posthtmlRender(htmlAst),
-    scripts,
-    styles,
-    images
-  }
-})
 
+/**
+ * html入口处理，返回tasks，中间包活html资源，html中的css和js资源
+ */
+function htmlProcess(){
+  const htmls=fsHelper.getAllFiles("./")
+  return htmls.map((htmlPath)=>{
+ 
+    // 获取模版
+    // 拼接
+    let people = ['geddy', 'neil', 'alex']
+    let html = ejs.render(fs.readFileSync(getEntryPath(htmlPath), 'utf8'), {people: people},{filename:getEntryPath(htmlPath)})
+    html=prettier.format(html, { semi:true, parser: "html" })
+    // 获取ast
+    let htmlAst = posthtmlParser(html)
+    const styles=[]
+    const scripts=[]
+    const images=[]
+    let title=""
+    let description=""
+    // 解析ast
+    for(let node of htmlAst){
+      getNode(node).forEach((n)=>{
+        if(n.tag==="script" && n.attrs.src){ 
+          const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.src,"view","","view")
+          scripts.push(newAddr)
+          n.attrs.src=newAddr.relPath
+          
+        }else if(n.tag==="link" && n.attrs.rel==="stylesheet"){
+          const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.href,"view","","view")
+          styles.push(newAddr)
+          n.attrs.href=cssPathProcess(newAddr.relPath)
+        }else if(n.tag==="img" && n.attrs.src){
+          const newAddr=getNewRelativePath(entry,output,htmlPath,n.attrs.src,"view","","view")
+          images.push(newAddr)
+          n.attrs.src=newAddr.relPath
+        }else if(n.tag==="title"){
+          title=n.content.join("")
+        }else if(n.tag==="meta"&&n.name==="description"){
+          description=n.content;
+        }
+        
+      })
+    }
+    return {
+      title,
+      description,
+      link:htmlPath,
+      htmlPath:path.join(output,"view",htmlPath),
+      htmlAst,
+      html:posthtmlRender(htmlAst),
+      scripts,
+      styles,
+      images
+    }
+  })
+}
 
 /**
  * 
@@ -128,49 +149,16 @@ function cssPathProcess(p){
   return path.format(oriPath)
 }
 
-
-async function run(){
-  const filesResult=[],stylesmap=[],scriptmap=[],imagesmap=[]
-  for(let task of tasks){
-    filesResult.push({
-      path:task.htmlPath,
-      source:task.html
-    })
-    for(let s of task.styles){
-      if(stylesmap.indexOf(s)<0){
-        stylesmap.push(s.relPath)
-        filesResult.push({
-          path:cssPathProcess(s.aimRelAbPath),
-          source:await cssProcess(s.oriRelAbPath)
-        })
-      }
-    }
-    for(let s of task.scripts){
-      if(scriptmap.indexOf(s)<0){
-        scriptmap.push(s.aim)
-        filesResult.push({
-          path:s.aimRelAbPath,
-          source:jsProcess(s.oriRelAbPath)
-        })
-      }
-    }
-    for(let s of task.images){
-      if(imagesmap.indexOf(s)<0){
-        imagesmap.push(s)
-      }
-    }
-  }
-  await writeFiles(filesResult)
-  await writeAssets(imagesmap)
-}
-
-run()
 async function writeFiles(files){
-  for(let f of files){
-    if(!fs.existsSync(f.path)){
-      fs.mkdirSync(path.dirname(f.path),{recursive:true}) 
+  try{
+    for(let f of files){
+      if(!fs.existsSync(f.path)){
+        fs.mkdirSync(path.dirname(f.path),{recursive:true}) 
+      }
+      fs.writeFileSync(f.path, f.source,'utf8')
     }
-    fs.writeFileSync(f.path, f.source,'utf8')
+  }catch(e){
+    console.log(e)
   }
 }
 async function writeAssets(images){
@@ -208,7 +196,7 @@ async function cssProcess(cssPath){
     css=result.css
   }
   //加前缀
-  return await postcss(autoprefixer).process(css).then(r => {
+  return await postcss(autoprefixer).process(css,{from: void 0}).then(r => {
     r.warnings().forEach(warn => {
       console.warn(warn.toString())
     })
@@ -219,8 +207,54 @@ async function cssProcess(cssPath){
 function jsProcess(jsPath){
   const js=babel.transformFileSync(jsPath)
   return prettier.format(js.code, { semi:true, parser: "babel" })
-  return ""
 }
 
+async function run(){
+  console.log("running")
+  const filesResult=[],stylesmap=[],scriptmap=[],imagesmap=[]
+  const tasks=htmlProcess()
+  for(let task of tasks){
+    filesResult.push({
+      path:task.htmlPath,
+      source:task.html
+    })
+    for(let s of task.styles){
+      if(stylesmap.indexOf(s)<0){
+        stylesmap.push(s.relPath)
+        filesResult.push({
+          path:cssPathProcess(s.aimRelAbPath),
+          source:await cssProcess(s.oriRelAbPath)
+        })
+      }
+    }
+    for(let s of task.scripts){
+      if(scriptmap.indexOf(s)<0){
+        scriptmap.push(s.aim)
+        filesResult.push({
+          path:s.aimRelAbPath,
+          source:jsProcess(s.oriRelAbPath)
+        })
+      }
+    }
+    for(let s of task.images){
+      if(imagesmap.indexOf(s)<0){
+        imagesmap.push(s)
+      }
+    }
+  }
+  filesResult.push({
+    path:path.join(output,"index.html"),
+    source:ejs.render(fs.readFileSync(path.join(__dirname,"report/template.html"),'utf8'), {lists: tasks},{filename:path.join(__dirname,"report/template.html")})
+  })
+  await writeFiles(filesResult)
+  await writeAssets(imagesmap) 
+}
 
-return ;
+module.exports=async function(op){
+  await run()
+  if(op==="--watch"){
+    require("./watch")(entry)
+  }else{
+    
+  }
+}
