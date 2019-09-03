@@ -3,7 +3,7 @@ const fs=require("fs")
 var browserSync = require("browser-sync");
 
 
-module.exports=async function(entry){
+module.exports=async function(entry,run){
   // Start the server
   let startSever=false;
   browserSync({server: "./dist"});

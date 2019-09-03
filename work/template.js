@@ -253,7 +253,7 @@ async function run(){
 module.exports=async function(op){
   await run()
   if(op==="--watch"){
-    require("./watch")(entry)
+    require("./watch")(entry,run)
   }else{
     
   }
