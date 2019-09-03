@@ -1,10 +1,10 @@
 {
-  "name": "sepack-project",
+  "name": "sipack-project",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "sepack",
+    "start": "sipack",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "browserslist": [
@@ -14,8 +14,6 @@
   "license": "ISC",
   "dependencies": {},
   "devDependencies": {
-    "sepack":"latest",
-    "@babel/core": "^7.5.5",
-    "@babel/preset-env": "^7.5.5"
+    "sipack":"latest"
   }
 }

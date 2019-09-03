@@ -1,4 +1,4 @@
-## sepack
+## sipack
 
 simple pack 最简单的打包工具，以html为入口，打包📦文件的方式。
 
@@ -8,10 +8,10 @@ simple pack 最简单的打包工具，以html为入口，打包📦文件的方
 
 支持babel编译es6=>es5
 
-## 新建一个sepack项目
+## 新建一个sipack项目
 
 ```
-npx sepack init yourProjectName
+npx sipack init yourProjectName
 cd yourProjectName
 npm install
 npm start
@@ -22,12 +22,12 @@ npm start
 项目安装
 
 ```
-npm install --save-dev sepack
+npm install --save-dev sipack
 ```
 
 一键打包
 ```
-npx sepack
+npx sipack
 ```
 
 

@@ -3,7 +3,7 @@ const fs=require("fs")
 
 module.exports= (c)=>{
     const context=c?c:process.cwd();
-    const configFile=path.join(context,".sepack.json")
+    const configFile=path.join(context,".sipack.json")
     let api={}
     if(fs.existsSync(configFile)){
         api=JSON.parse(fs.readFileSync(configFile,"utf8"))

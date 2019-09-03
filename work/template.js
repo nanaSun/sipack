@@ -38,7 +38,7 @@ const fsHelperConstruct=require("./libs/fs")
 const {getNewRelativePath}=require("./libs/path")
 
 // 获取配置
-const initConfig=require("./sepack.default")
+const initConfig=require("./sipack.default")
 
 
 const {context,output,entry,isImageMin}=initConfig()
