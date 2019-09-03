@@ -1,9 +1,17 @@
 {
   "name": "sipack",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "最简单的打包工具，以html为入口，打包📦文件的方式。",
   "bin": {
     "sipack": "bin/sipack"
+  },
+  "homepage": "https://github.com/nanaSun/sipack",
+  "bugs":{
+    "url" : "https://github.com/nanaSun/sipack/issues"
+  },
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/nanaSun/sipack.git"
   },
   "main": "./work/template.js",
   "scripts": {
@@ -12,7 +20,7 @@
   "browserslist": [
     "last 8 version"
   ],
-  "author": "",
+  "author": "nanasun",
   "license": "ISC",
   "dependencies": {
     "@babel/core": "^7.5.5",
@@ -33,9 +41,10 @@
     "prettier": "^1.18.2",
     "browser-sync": "^2.26.7"
   },
-  "devDependencies": {
-  },
-  "repository": {
-    "type": "git"
-  }
+  "devDependencies": {},
+  "keywords": [
+    "html",
+    "js",
+    "css"
+  ]
 }

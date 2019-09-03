@@ -14,7 +14,10 @@ simple pack 最简单的打包工具，以html为入口，打包📦文件的方
 npx sipack init yourProjectName
 cd yourProjectName
 npm install
+// 编译文件并调试
 npm start
+// 打包文件
+npm run-script build
 ```
 
 ## 用法
